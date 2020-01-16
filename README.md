@@ -28,7 +28,13 @@ In the cell below:
 
 
 ```python
-
+import nltk
+from nltk.corpus import gutenberg, stopwords
+from nltk.collocations import *
+from nltk import FreqDist
+from nltk import word_tokenize
+import string
+import re
 ```
 
 Now, let's take a look at the corpora available to us. There are many, many corpora available inside of nltk's `corpus` module. For this lab, we'll make use of the texts contained in `corpus.gutenberg`-- 18 different (complete) corpora that can be found on the [Project Gutenberg](https://www.gutenberg.org/) website. 
@@ -37,9 +43,33 @@ To see the file ids for each of the corpora inside of `gutenberg`, we can call t
 
 
 ```python
-file_ids = None
+file_ids = gutenberg.fileids()
 file_ids
 ```
+
+
+
+
+    ['austen-emma.txt',
+     'austen-persuasion.txt',
+     'austen-sense.txt',
+     'bible-kjv.txt',
+     'blake-poems.txt',
+     'bryant-stories.txt',
+     'burgess-busterbrown.txt',
+     'carroll-alice.txt',
+     'chesterton-ball.txt',
+     'chesterton-brown.txt',
+     'chesterton-thursday.txt',
+     'edgeworth-parents.txt',
+     'melville-moby_dick.txt',
+     'milton-paradise.txt',
+     'shakespeare-caesar.txt',
+     'shakespeare-hamlet.txt',
+     'shakespeare-macbeth.txt',
+     'whitman-leaves.txt']
+
+
 
 Great! For the first part of this lab, we'll be working with Shakespeare's *Macbeth*, a tragedy about a pair of ambitious social climbers. 
 
@@ -49,8 +79,56 @@ Do this now in the cell below.  Then, print the first 1000 characters of the tex
 
 
 ```python
-macbeth_text = None
+macbeth_text = gutenberg.raw(file_ids[-2])
+print(macbeth_text[:1000])
 ```
+
+    [The Tragedie of Macbeth by William Shakespeare 1603]
+    
+    
+    Actus Primus. Scoena Prima.
+    
+    Thunder and Lightning. Enter three Witches.
+    
+      1. When shall we three meet againe?
+    In Thunder, Lightning, or in Raine?
+      2. When the Hurley-burley's done,
+    When the Battaile's lost, and wonne
+    
+       3. That will be ere the set of Sunne
+    
+       1. Where the place?
+      2. Vpon the Heath
+    
+       3. There to meet with Macbeth
+    
+       1. I come, Gray-Malkin
+    
+       All. Padock calls anon: faire is foule, and foule is faire,
+    Houer through the fogge and filthie ayre.
+    
+    Exeunt.
+    
+    
+    Scena Secunda.
+    
+    Alarum within. Enter King Malcome, Donalbaine, Lenox, with
+    attendants,
+    meeting a bleeding Captaine.
+    
+      King. What bloody man is that? he can report,
+    As seemeth by his plight, of the Reuolt
+    The newest state
+    
+       Mal. This is the Serieant,
+    Who like a good and hardie Souldier fought
+    'Gainst my Captiuitie: Haile braue friend;
+    Say to the King, the knowledge of the Broyle,
+    As thou didst leaue it
+    
+       Cap. Doubtfull it stood,
+    As two spent Swimmers, t
+    
 
 **_Question:_**  Look at the text snippet above. What do you notice about it? Are there any issues you see that we'll need to deal with during the preprocessing steps?
 
@@ -74,15 +152,15 @@ In the cell below:
 
 
 ```python
-pattern = None
-macbeth_tokens_raw = None
+pattern = "([a-zA-Z]+(?:'[a-z]+)?)"
+macbeth_tokens_raw = nltk.regexp_tokenize(macbeth_text, pattern)
 ```
 
 Great! Now that we have our tokens, we need to lowercase them. In the cell below, use a list comprehension and the `.lower()` method on every word token in `macbeth_tokens_raw`. Store this inside `macbeth_tokens`.
 
 
 ```python
-macbeth_tokens = None
+macbeth_tokens = [token.lower() for token in macbeth_tokens_raw]
 ```
 
 ## Frequency Distributions
@@ -96,9 +174,65 @@ In the cell below:
 
 
 ```python
-macbeth_freqdist = None
+macbeth_freqdist = FreqDist(macbeth_tokens)
 macbeth_freqdist.most_common(50)
 ```
+
+
+
+
+    [('the', 649),
+     ('and', 545),
+     ('to', 383),
+     ('of', 338),
+     ('i', 331),
+     ('a', 241),
+     ('that', 227),
+     ('my', 203),
+     ('you', 203),
+     ('in', 199),
+     ('is', 180),
+     ('not', 165),
+     ('it', 161),
+     ('with', 153),
+     ('his', 146),
+     ('be', 137),
+     ('macb', 137),
+     ('your', 126),
+     ('our', 123),
+     ('haue', 122),
+     ('but', 120),
+     ('me', 113),
+     ('he', 110),
+     ('for', 109),
+     ('what', 106),
+     ('this', 104),
+     ('all', 99),
+     ('so', 96),
+     ('him', 90),
+     ('as', 89),
+     ('thou', 87),
+     ('we', 83),
+     ('enter', 81),
+     ('which', 80),
+     ('are', 73),
+     ('will', 72),
+     ('they', 70),
+     ('shall', 68),
+     ('no', 67),
+     ('then', 63),
+     ('macbeth', 62),
+     ('their', 62),
+     ('thee', 61),
+     ('vpon', 58),
+     ('on', 58),
+     ('macd', 58),
+     ('from', 57),
+     ('yet', 57),
+     ('thy', 56),
+     ('vs', 55)]
+
+
 
 Well, that doesn't tell us very much! The top 10 most used words in macbeth are all **_Stop Words_**. They don't contain any interesting information, and essentially just act as the "connective tissue" between the words that really matter in any text. Let's try removing the stopwords and punctuation, and then creating another frequency distribution that contains only the important words. 
 
@@ -115,11 +249,11 @@ In the cell below:
 
 
 ```python
-stopwords_list = None
-stopwords_list += None
-stopwords_list += None
+stopwords_list = stopwords.words('english')
+stopwords_list += list(string.punctuation)
+stopwords_list += ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-macbeth_words_stopped = None
+macbeth_words_stopped = [word for word in macbeth_tokens if word not in stopwords_list]
 ```
 
 Great! Now, let's create another frequency distribution using `macbeth_words_stopped`, and then inspect the top 50 most common words, to see if removing stopwords and punctuation has helped. 
@@ -128,9 +262,65 @@ Do this now in the cell below.
 
 
 ```python
-macbeth_stopped_freqdist = None
+macbeth_stopped_freqdist = FreqDist(macbeth_words_stopped)
 macbeth_stopped_freqdist.most_common(50)
 ```
+
+
+
+
+    [('macb', 137),
+     ('haue', 122),
+     ('thou', 87),
+     ('enter', 81),
+     ('shall', 68),
+     ('macbeth', 62),
+     ('thee', 61),
+     ('vpon', 58),
+     ('macd', 58),
+     ('yet', 57),
+     ('thy', 56),
+     ('vs', 55),
+     ('come', 54),
+     ('king', 54),
+     ('hath', 52),
+     ('good', 49),
+     ('rosse', 49),
+     ('lady', 48),
+     ('would', 47),
+     ('time', 46),
+     ('like', 43),
+     ('say', 39),
+     ('doe', 38),
+     ('lord', 38),
+     ('make', 38),
+     ('tis', 37),
+     ('must', 36),
+     ('done', 35),
+     ('selfe', 35),
+     ('ile', 35),
+     ('feare', 35),
+     ('let', 35),
+     ('man', 34),
+     ('wife', 34),
+     ('night', 34),
+     ('banquo', 34),
+     ('well', 33),
+     ('know', 33),
+     ('one', 32),
+     ('great', 31),
+     ('see', 31),
+     ('may', 31),
+     ('exeunt', 30),
+     ('speake', 29),
+     ('sir', 29),
+     ('lenox', 28),
+     ('mine', 26),
+     ('vp', 26),
+     ('th', 26),
+     ('mal', 25)]
+
+
 
 This is definitely an improvement! You may be wondering why `'Macb'` shows up as the number 1 most used token. If you inspect [Macbeth](http://www.gutenberg.org/cache/epub/1795/pg1795-images.html) on project gutenberg and search for `'Macb'`, you'll soon discover that the source text denotes `Macb` as stage direction for any line spoken by Macbeth's character. This means that `'Macb'` is actually stage direction, meaning that under normal circumstances, we would need to ask ourselves if it is worth it to remove it or keep it. In the interest of time for this lab, we'll leave it be. 
 
@@ -146,8 +336,15 @@ Compute this in the cell below.
 
 
 ```python
-
+len(macbeth_freqdist)
 ```
+
+
+
+
+    3546
+
+
 
 ### Normalized Word Frequency
 
@@ -157,13 +354,66 @@ Compute this now in the cell below, and display the normalized word frequency fo
 
 
 ```python
-total_word_count = None
-macbeth_top_50 = None
+total_word_count = sum(macbeth_stopped_freqdist.values())
+macbeth_top_50 = macbeth_stopped_freqdist.most_common(50)
 print('Word\t\t\tNormalized Frequency')
 for word in macbeth_top_50:
-    normalized_frequency = None
-    print('{} \t\t\t {:.4}'.format(None, None))
+    normalized_frequency = word[1]/total_word_count
+    print('{} \t\t\t {:.4}'.format(word[0], normalized_frequency))
 ```
+
+    Word			Normalized Frequency
+    macb 			 0.01354
+    haue 			 0.01206
+    thou 			 0.008601
+    enter 			 0.008008
+    shall 			 0.006723
+    macbeth 			 0.00613
+    thee 			 0.006031
+    vpon 			 0.005734
+    macd 			 0.005734
+    yet 			 0.005635
+    thy 			 0.005536
+    vs 			 0.005437
+    come 			 0.005339
+    king 			 0.005339
+    hath 			 0.005141
+    good 			 0.004844
+    rosse 			 0.004844
+    lady 			 0.004745
+    would 			 0.004647
+    time 			 0.004548
+    like 			 0.004251
+    say 			 0.003856
+    doe 			 0.003757
+    lord 			 0.003757
+    make 			 0.003757
+    tis 			 0.003658
+    must 			 0.003559
+    done 			 0.00346
+    selfe 			 0.00346
+    ile 			 0.00346
+    feare 			 0.00346
+    let 			 0.00346
+    man 			 0.003361
+    wife 			 0.003361
+    night 			 0.003361
+    banquo 			 0.003361
+    well 			 0.003262
+    know 			 0.003262
+    one 			 0.003164
+    great 			 0.003065
+    see 			 0.003065
+    may 			 0.003065
+    exeunt 			 0.002966
+    speake 			 0.002867
+    sir 			 0.002867
+    lenox 			 0.002768
+    mine 			 0.00257
+    vp 			 0.00257
+    th 			 0.00257
+    mal 			 0.002472
+    
 
 ## Creating Bigrams
 
@@ -178,24 +428,80 @@ In the cell below:
 
 
 ```python
-bigram_measures = None
+bigram_measures = nltk.collocations.BigramAssocMeasures()
 ```
 
 
 ```python
-macbeth_finder = None
+macbeth_finder = BigramCollocationFinder.from_words(macbeth_words_stopped)
 ```
 
 
 ```python
-macbeth_scored = None
+macbeth_scored = macbeth_finder.score_ngrams(bigram_measures.raw_freq)
 ```
 
 
 ```python
 # Display the first 50 elements of macbeth_scored
-
+macbeth_scored[:50]
 ```
+
+
+
+
+    [(('enter', 'macbeth'), 0.0015818091942659417),
+     (('exeunt', 'scena'), 0.0014829461196243204),
+     (('thane', 'cawdor'), 0.0012852199703410777),
+     (('knock', 'knock'), 0.0009886307464162135),
+     (('lord', 'macb'), 0.0008897676717745922),
+     (('thou', 'art'), 0.0008897676717745922),
+     (('good', 'lord'), 0.0007909045971329708),
+     (('haue', 'done'), 0.0007909045971329708),
+     (('macb', 'haue'), 0.0007909045971329708),
+     (('enter', 'lady'), 0.0006920415224913495),
+     (('let', 'vs'), 0.0006920415224913495),
+     (('macbeth', 'macb'), 0.0005931784478497281),
+     (('enter', 'malcolme'), 0.0004943153732081067),
+     (('enter', 'three'), 0.0004943153732081067),
+     (('euery', 'one'), 0.0004943153732081067),
+     (('macb', 'ile'), 0.0004943153732081067),
+     (('macb', 'thou'), 0.0004943153732081067),
+     (('make', 'vs'), 0.0004943153732081067),
+     (('mine', 'eyes'), 0.0004943153732081067),
+     (('mine', 'owne'), 0.0004943153732081067),
+     (('scena', 'secunda'), 0.0004943153732081067),
+     (('three', 'witches'), 0.0004943153732081067),
+     (('thy', 'selfe'), 0.0004943153732081067),
+     (('worthy', 'thane'), 0.0004943153732081067),
+     (('would', 'haue'), 0.0004943153732081067),
+     (('borne', 'woman'), 0.0003954522985664854),
+     (('come', 'come'), 0.0003954522985664854),
+     (('enter', 'banquo'), 0.0003954522985664854),
+     (('enter', 'king'), 0.0003954522985664854),
+     (('enter', 'macduffe'), 0.0003954522985664854),
+     (('enter', 'rosse'), 0.0003954522985664854),
+     (('haile', 'king'), 0.0003954522985664854),
+     (('haile', 'macbeth'), 0.0003954522985664854),
+     (('hath', 'made'), 0.0003954522985664854),
+     (('haue', 'seene'), 0.0003954522985664854),
+     (('macb', 'bring'), 0.0003954522985664854),
+     (('macbeth', 'macbeth'), 0.0003954522985664854),
+     (('malcolme', 'donalbaine'), 0.0003954522985664854),
+     (('old', 'man'), 0.0003954522985664854),
+     (('rosse', 'angus'), 0.0003954522985664854),
+     (('scena', 'prima'), 0.0003954522985664854),
+     (('see', 'thee'), 0.0003954522985664854),
+     (('shew', 'shew'), 0.0003954522985664854),
+     (('sir', 'macb'), 0.0003954522985664854),
+     (('ten', 'thousand'), 0.0003954522985664854),
+     (('tertia', 'enter'), 0.0003954522985664854),
+     (('thy', 'face'), 0.0003954522985664854),
+     (('woman', 'borne'), 0.0003954522985664854),
+     (('would', 'make'), 0.0003954522985664854),
+     (('alarums', 'enter'), 0.00029658922392486405)]
+
+
 
 These look a bit more interesting. We can see here that some of the most common ones are stage directions, such as 'Enter Macbeth' and 'Exeunt Scena', while others seem to be common phrases used in the play. 
 
@@ -216,23 +522,26 @@ In the cell below:
 
 
 ```python
-macbeth_pmi_finder = None
+macbeth_pmi_finder = BigramCollocationFinder.from_words(macbeth_words_stopped)
 ```
 
 
 ```python
-
+macbeth_pmi_finder.apply_freq_filter(5)
 ```
 
 
 ```python
-macbeth_pmi_scored = None
+macbeth_pmi_scored = macbeth_pmi_finder.score_ngrams(bigram_measures.pmi)
 ```
 
 
 ```python
-
+print(macbeth_pmi_scored[:50])
 ```
+
+    [(('three', 'witches'), 8.925697076191916), (('scena', 'secunda'), 8.844777080808349), (('knock', 'knock'), 8.62613679433301), (('thane', 'cawdor'), 7.968474805033251), (('exeunt', 'scena'), 7.844777080808349), (('mine', 'eyes'), 7.46626545755462), (('worthy', 'thane'), 6.982280604558284), (('mine', 'owne'), 6.838234234941577), (('euery', 'one'), 6.626136794333009), (('thou', 'art'), 5.861265203596917), (('enter', 'malcolme'), 5.585847073307292), (('enter', 'three'), 5.585847073307292), (('good', 'lord'), 5.441571341886851), (('let', 'vs'), 5.2009208910336255), (('enter', 'macbeth'), 5.0101623861741444), (('thy', 'selfe'), 4.689498855330438), (('make', 'vs'), 4.596849567364764), (('haue', 'done'), 4.2441883449377915), (('enter', 'lady'), 4.186751117897471), (('lord', 'macb'), 4.128174104483847), (('macb', 'ile'), 3.3988216944275145), (('would', 'haue'), 3.1408106050924847), (('macbeth', 'macb'), 2.836942806819401), (('macb', 'haue'), 2.2754392789222315), (('macb', 'thou'), 2.0851612155237547)]
+    
 
 ## On Your Own: Comparative Corpus Statistics
 
@@ -246,39 +555,366 @@ In the cells below:
 
 
 ```python
+text = gutenberg.raw(file_ids[1])
+print(text[:1000])
+```
 
+    [Persuasion by Jane Austen 1818]
+    
+    
+    Chapter 1
+    
+    
+    Sir Walter Elliot, of Kellynch Hall, in Somersetshire, was a man who,
+    for his own amusement, never took up any book but the Baronetage;
+    there he found occupation for an idle hour, and consolation in a
+    distressed one; there his faculties were roused into admiration and
+    respect, by contemplating the limited remnant of the earliest patents;
+    there any unwelcome sensations, arising from domestic affairs
+    changed naturally into pity and contempt as he turned over
+    the almost endless creations of the last century; and there,
+    if every other leaf were powerless, he could read his own history
+    with an interest which never failed.  This was the page at which
+    the favourite volume always opened:
+    
+               "ELLIOT OF KELLYNCH HALL.
+    
+    "Walter Elliot, born March 1, 1760, married, July 15, 1784, Elizabeth,
+    daughter of James Stevenson, Esq. of South Park, in the county of
+    Gloucester, by which lady (who died 1800) he has issue Elizabeth,
+    born June 1, 1785; Ann
+    
+
+
+```python
+pattern = "([a-zA-Z]+(?:'[a-z]+)?)"
+text_tokens_raw = nltk.regexp_tokenize(text, pattern)
 ```
 
 
 ```python
-
+tokens = [word.lower() for word in text_tokens_raw]
 ```
 
 
 ```python
+stopwords_list = stopwords.words('english')
+stopwords_list += list(string.punctuation)
+stopwords_list += ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
+words_stopped = [word for word in tokens if word not in stopwords_list]
 ```
 
 
 ```python
-
+stopped_freqdist = FreqDist(words_stopped)
+stopped_freqdist.most_common(10)
 ```
+
+
+
+
+    [('could', 451),
+     ('anne', 447),
+     ('would', 355),
+     ('captain', 303),
+     ('mrs', 291),
+     ('mr', 256),
+     ('elliot', 254),
+     ('one', 231),
+     ('must', 228),
+     ('lady', 214)]
+
+
 
 
 ```python
-
+len(stopped_freqdist)
 ```
+
+
+
+
+    5696
+
+
 
 
 ```python
-
+total_word_count = sum(stopped_freqdist.values())
+top_50 = stopped_freqdist.most_common(50)
+print('Word\t\t\tNormalized Frequency')
+for word in top_50:
+    normalized_frequency = word[1]/total_word_count
+    print('{} \t\t\t {:.4}'.format(word[0], normalized_frequency))
 ```
+
+    Word			Normalized Frequency
+    could 			 0.01176
+    anne 			 0.01165
+    would 			 0.009253
+    captain 			 0.007898
+    mrs 			 0.007585
+    mr 			 0.006673
+    elliot 			 0.006621
+    one 			 0.006021
+    must 			 0.005943
+    lady 			 0.005578
+    much 			 0.005344
+    wentworth 			 0.004979
+    good 			 0.004874
+    little 			 0.004588
+    said 			 0.004509
+    might 			 0.004327
+    well 			 0.004249
+    never 			 0.00404
+    charles 			 0.00404
+    time 			 0.003962
+    sir 			 0.003884
+    think 			 0.003884
+    nothing 			 0.003623
+    great 			 0.003389
+    man 			 0.00331
+    know 			 0.00331
+    miss 			 0.003258
+    walter 			 0.003206
+    see 			 0.003206
+    soon 			 0.00318
+    mary 			 0.003154
+    russell 			 0.003076
+    though 			 0.00305
+    two 			 0.002972
+    first 			 0.002945
+    quite 			 0.002919
+    musgrove 			 0.002893
+    always 			 0.002867
+    without 			 0.002815
+    every 			 0.002659
+    bath 			 0.002633
+    louisa 			 0.002581
+    made 			 0.002502
+    long 			 0.002476
+    father 			 0.00245
+    house 			 0.00245
+    say 			 0.002424
+    seemed 			 0.002424
+    thought 			 0.002346
+    however 			 0.00232
+    
 
 
 ```python
-
+pmi_finder = BigramCollocationFinder.from_words(words_stopped)
+pmi_finder.apply_freq_filter(5)
+pmi_scored = pmi_finder.score_ngrams(bigram_measures.pmi)
+pmi_scored
 ```
+
+
+
+
+    [(('west', 'indies'), 12.15707620161028),
+     (('beg', 'pardon'), 11.54939362438904),
+     (('dr', 'shirley'), 11.542967355229607),
+     (('marlborough', 'buildings'), 11.320574933893159),
+     (('westgate', 'buildings'), 11.320574933893159),
+     (('milsom', 'street'), 10.527025811360586),
+     (('colonel', 'wallis'), 10.189330400614907),
+     (('eldest', 'son'), 9.876968282417545),
+     (('five', 'minutes'), 9.527025811360584),
+     (('ten', 'minutes'), 9.263991405526792),
+     (('drawing', 'rooms'), 9.209543621504416),
+     (('kellynch', 'hall'), 8.87414223833878),
+     (('camden', 'place'), 8.784522033652948),
+     (('laura', 'place'), 8.784522033652948),
+     (('eight', 'years'), 8.784522033652946),
+     (('spend', 'evening'), 8.598108909422066),
+     (('depend', 'upon'), 8.598108909422065),
+     (('dare', 'say'), 8.57282950097371),
+     (('anybody', 'else'), 8.546578608781987),
+     (('ill', 'used'), 8.35710080991827),
+     (('miss', 'carteret'), 8.26168124483959),
+     (('sir', "walter's"), 8.008297009039516),
+     (('years', 'ago'), 7.95444703509526),
+     (('sir', 'walter'), 7.885961466115461),
+     (('drawing', 'room'), 7.869913524883595),
+     (('great', 'deal'), 7.800707461393888),
+     (('charles', 'hayter'), 7.741887758598491),
+     (('good', 'humour'), 7.6805710696140395),
+     (('half', 'hour'), 7.583609339726953),
+     (('lady', 'russell'), 7.485998543100532),
+     (('lady', "russell's"), 7.437088942619583),
+     (('good', 'humoured'), 7.417536663780247),
+     (('take', 'care'), 7.417536663780247),
+     (('miss', 'musgroves'), 7.363560858858802),
+     (('think', 'differently'), 7.35622031245982),
+     (('father', 'mother'), 7.3289222766066775),
+     (('lady', 'dalrymple'), 7.309120781016452),
+     (('little', 'boys'), 7.282607083694138),
+     (('admiral', 'croft'), 7.12680319049648),
+     (('next', 'morning'), 7.122430058803388),
+     (('mrs', "clay's"), 7.042590186593394),
+     (('mrs', 'clay'), 7.042590186593392),
+     (('mrs', "smith's"), 7.042590186593392),
+     (('give', 'notice'), 6.997685362768351),
+     (('last', 'night'), 6.990426332200826),
+     (('mrs', 'smith'), 6.946374871334088),
+     (('young', 'ladies'), 6.942063310639428),
+     (('mr', 'shepherd'), 6.932009645975505),
+     (('captain', "wentworth's"), 6.929843762006348),
+     (('without', 'knowing'), 6.8876155266170525),
+     (('upon', 'word'), 6.864895450116967),
+     (('mr', "elliot's"), 6.853070014720178),
+     (('oh', 'yes'), 6.835148106722913),
+     (('uppercross', 'cottage'), 6.823175465056842),
+     (('captain', 'wentworth'), 6.816253654130678),
+     (('young', 'people'), 6.757145594721646),
+     (("father's", 'house'), 6.734277222488183),
+     (('yes', 'yes'), 6.642503028780519),
+     (('captain', 'benwick'), 6.6403371448113635),
+     (('mrs', 'croft'), 6.595131209622174),
+     (('mr', 'elliot'), 6.438453187565877),
+     (('many', 'years'), 6.4195252168737),
+     (('mrs', "croft's"), 6.342150468452298),
+     (('father', 'sister'), 6.310306598439331),
+     (('ever', 'since'), 6.257565136367356),
+     (('young', 'man'), 6.238780842729513),
+     (('came', 'back'), 6.201403232915482),
+     (('mrs', "musgrove's"), 6.116590768037172),
+     (('sensible', 'man'), 6.068855841287197),
+     (('mrs', 'musgrove'), 6.05552924230089),
+     (('mrs', "harville's"), 6.042590186593392),
+     (('captain', 'harville'), 6.007011622528811),
+     (('soon', 'afterwards'), 5.934158112554082),
+     (('dalrymple', 'miss'), 5.883169621585862),
+     (('another', 'moment'), 5.883169621585861),
+     (('well', 'pleased'), 5.8787373752706),
+     (('time', 'life'), 5.8242597905801805),
+     (('miss', 'elliot'), 5.7648496543971),
+     (('old', 'friend'), 5.7280182320165025),
+     (('captain', "harville's"), 5.721257140194933),
+     (('deal', 'better'), 5.6145970322106376),
+     (('louisa', 'musgrove'), 5.611047965129565),
+     (('mr', "musgrove's"), 5.564500516779246),
+     (('cried', 'mary'), 5.56136836260705),
+     (('young', 'woman'), 5.537467558082232),
+     (('every', 'thing'), 5.519416277799461),
+     (('frederick', 'wentworth'), 5.512533177715994),
+     (('good', 'company'), 5.471117703985087),
+     (('soon', 'possible'), 5.389837596330272),
+     (('two', 'three'), 5.358951605606213),
+     (('great', 'house'), 5.350948582936677),
+     (('mrs', 'wallis'), 5.305624592427188),
+     (('dear', 'miss'), 5.26168124483959),
+     (('walter', 'elizabeth'), 5.249327114431717),
+     (('mrs', 'harville'), 5.23523526453579),
+     (('almost', 'every'), 5.23311209264282),
+     (('every', 'day'), 5.152941743958834),
+     (('good', 'fortune'), 5.144518169373832),
+     (('henrietta', 'louisa'), 5.138677290784768),
+     (('looking', 'man'), 5.068855841287199),
+     (('wonder', 'captain'), 5.0582921274725035),
+     (('good', 'deal'), 4.996072895341969),
+     (('enough', 'make'), 4.940214886247061),
+     (('replied', 'anne'), 4.928569816568782),
+     (('two', 'years'), 4.858522615096726),
+     (('charles', 'musgrove'), 4.857364976018424),
+     (('could', 'bear'), 4.825519405525137),
+     (('could', 'help'), 4.825519405525137),
+     (('came', 'bath'), 4.803719300386906),
+     (('day', 'long'), 4.770084650429142),
+     (('saw', 'nothing'), 4.758027209694037),
+     (('wish', 'see'), 4.748898123922229),
+     (('well', 'looking'), 4.708812373828286),
+     (('cried', 'mrs'), 4.657926336358068),
+     (('could', 'imagine'), 4.562484999691346),
+     (('shall', 'never'), 4.440379204950062),
+     (('never', 'seen'), 4.415288223987229),
+     (('replied', 'mrs'), 4.410321971093881),
+     (('mr', 'musgrove'), 4.339940258760089),
+     (('going', 'well'), 4.178297657129509),
+     (('one', 'day'), 4.166263122456668),
+     (('great', 'many'), 4.1176348752228815),
+     (('much', 'better'), 4.105041934147501),
+     (('walter', 'elliot'), 4.103621259447873),
+     (('one', 'morning'), 4.078035939444932),
+     (('miss', 'musgrove'), 4.052227879210639),
+     (('may', 'well'), 4.020756380143025),
+     (('cried', 'anne'), 3.868745656640721),
+     (('charles', 'mary'), 3.8398328090104474),
+     (('go', 'charles'), 3.8138376004775036),
+     (('would', 'hardly'), 3.7557903151096337),
+     (('cried', 'captain'), 3.751630789238453),
+     (('admiral', 'mrs'), 3.6968153497516614),
+     (('young', 'lady'), 3.6786436210429247),
+     (('could', 'hardly'), 3.6735163120800873),
+     (('would', 'rather'), 3.656254641558716),
+     (('dear', 'mrs'), 3.5571633594231518),
+     (('miss', 'anne'), 3.5450130649066125),
+     (('little', 'charles'), 3.4919095055901384),
+     (('would', 'go'), 3.4662836979146476),
+     (('could', 'hear'), 3.4470077822714096),
+     (('must', 'give'), 3.412722862047195),
+     (('would', 'come'), 3.3343265466713543),
+     (('could', 'feel'), 3.272978382496362),
+     (('anne', 'felt'), 3.271331414873311),
+     (('must', 'go'), 3.257071991587001),
+     (('anne', 'found'), 3.218220078413747),
+     (('well', 'know'), 3.211980783385796),
+     (('said', 'anne'), 3.158631282123949),
+     (('sure', 'would'), 3.1509282569507704),
+     (('mr', 'mrs'), 3.130053027843733),
+     (('one', 'two'), 3.1277889746420318),
+     (('know', 'said'), 3.1260807099801493),
+     (('could', 'give'), 3.106701158069191),
+     (('said', 'mrs'), 3.0673935775939647),
+     (('russell', 'would'), 3.043072267190105),
+     (('anne', 'elliot'), 2.958211777603207),
+     (('mrs', 'charles'), 2.9363907827614693),
+     (('said', 'lady'), 2.8587252375214085),
+     (('lady', 'elliot'), 2.8192419512157265),
+     (('would', 'like'), 2.737868407112371),
+     (('anne', 'could'), 2.7356339020079474),
+     (('could', 'never'), 2.593789119609358),
+     (('thought', 'would'), 2.5858653136673198),
+     (('would', 'always'), 2.559393102306128),
+     (('could', 'done'), 2.5229566355047073),
+     (('could', 'think'), 2.513241480671496),
+     (('would', 'never'), 2.4796659098353917),
+     (('think', 'one'), 2.47847606251082),
+     (('mr', 'wentworth'), 2.457391623523531),
+     (('could', 'see'), 2.2753223229646586),
+     (('long', 'could'), 2.1625543928027113),
+     (('anne', 'never'), 2.1472101030441166),
+     (('would', 'soon'), 2.1469810724341105),
+     (('walter', 'would'), 2.135203904657754),
+     (('would', 'think'), 2.1215842953686277),
+     (('nothing', 'could'), 2.0988957555803935),
+     (('mary', 'anne'), 1.8263993659311257),
+     (('soon', 'could'), 1.8016726635707716),
+     (('elliot', 'must'), 1.7278189234521335),
+     (('would', 'much'), 1.6612727163253425),
+     (('wentworth', 'would'), 1.5002895819612476),
+     (('elliot', 'would'), 1.3520681290586225),
+     (('anne', 'would'), 1.2735873888136773),
+     (('could', 'good'), 1.1855155412460228),
+     (('wentworth', 'anne'), 1.1678337751699743),
+     (('much', 'could'), 1.0529299016282145),
+     (('could', 'anne'), 0.19131338578413448)]
+
+
 
 ## Summary
 
 In this lab, we used our newfound NLP skills to generate some statistics specific to text data, and used them to compare two different works! 
+
+
+```python
+!jupyter nbconvert --to markdown index.ipynb
+!mv index.md README.md
+```
+
+
+```python
+
+```
